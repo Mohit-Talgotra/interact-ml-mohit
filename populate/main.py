@@ -6,8 +6,15 @@ from psycopg2.extras import execute_values
 from datetime import datetime
 import uuid
 import os
+from dotenv import load_dotenv
 
-logging.basicConfig(level=logging.INFO)
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],  # Use a StreamHandler to output to console
+)
 
 conn = None
 
@@ -17,22 +24,25 @@ try:
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASS"),
         host=os.getenv("DB_HOST"),
-        port=os.getenv("DB_PORT")
+        port=os.getenv("DB_PORT"),
     )
 except Exception as e:
     logging.error("Error while populating dummies.", e)
+
 
 def fill_dummies():
     populate_users_and_orgs()
     populate_projects()
     populate_posts()
     populate_openings()
-    populate_comments()
-    populate_applications()
-    generate_dummies()
+    # populate_comments()
+    # populate_applications()
+    # generate_dummies()
+
 
 def to_lowercase_array(arr):
     return [str.lower() for str in arr]
+
 
 def random_links():
     links = [
@@ -40,166 +50,243 @@ def random_links():
         "https://www.youtube.com",
         "https://www.facebook.com",
         "https://www.gmail.com",
-        "https://www.github.com"
+        "https://www.github.com",
     ]
     count = random.randint(0, 5)
     random.shuffle(links)
     return links[:count]
 
-def get_random_user(users):
-    return random.choice(users)
-
-def get_random_project_id(project_ids):
-    return random.choice(project_ids)
 
 def soft_slugify(text):
     return text.lower().replace(" ", "-").replace("/", "-")
 
+
 def populate_projects():
     logging.info("----------------Populating Projects----------------")
-    with open('populate/projects.json', 'r') as file:
+    with open("populate/projects.json", "r") as file:
         projects = json.load(file)
 
     with conn.cursor() as cur:
-        cur.execute("SELECT * FROM users")
-        users = cur.fetchall()
+        cur.execute("SELECT id FROM users")
+        user_ids = cur.fetchall()
 
-        if not users:
+        if not user_ids:
             return
 
         cover_pics = [
-            "default_1.jpg", "default_2.jpg", "default_3.jpg",
-            "default_4.jpg", "default_5.jpg", "default_6.jpg",
-            "default_7.jpg", "default_8.jpg", "default_9.jpg"
+            "default_1.jpg",
+            "default_2.jpg",
+            "default_3.jpg",
+            "default_4.jpg",
+            "default_5.jpg",
+            "default_6.jpg",
+            "default_7.jpg",
+            "default_8.jpg",
+            "default_9.jpg",
         ]
 
         for project in projects:
-            user = get_random_user(users)
-            project['user_id'] = user[0]
-            project['slug'] = soft_slugify(project['title'])
-            project['tags'] = to_lowercase_array(project['tags'])
-            project['links'] = random_links()
+            project_data = {
+                "user_id": random.choice(user_ids)[0],
+                "title": project["title"],
+                "slug": soft_slugify(project["title"]),
+                "tagline": project["tagline"],
+                "description": project["description"],
+                "category": project["category"],
+                "tags": to_lowercase_array(project["tags"]),
+                "links": random_links(),
+                "cover_pic": random.choice(cover_pics),
+                "blur_hash": "no-hash",
+            }
 
-            # Randomly select a cover picture
-            project['cover_pic'] = random.choice(cover_pics)
-            project['blur_hash'] = 'no-hash'
+            columns = project_data.keys()
+            placeholders = ", ".join(["%s"] * len(columns))
+            insert_statement = (
+                f"INSERT INTO projects ({', '.join(columns)}) VALUES ({placeholders})"
+            )
 
-            columns = project.keys()
-            values = [project[column] for column in columns]
-            insert_statement = 'INSERT INTO projects (%s) VALUES %s' % (
-                ', '.join(columns), tuple(values))
+            values = [
+                project_data["user_id"],
+                project_data["title"],
+                project_data["slug"],
+                project_data["tagline"],
+                project_data["description"],
+                project_data["category"],
+                project_data["tags"],
+                project_data["links"],
+                project_data["cover_pic"],
+                project_data["blur_hash"],
+            ]
+
             try:
-                cur.execute(insert_statement)
+                cur.execute(insert_statement, values)
                 conn.commit()
-                logging.info("Added Project: %s", project['title'])
+                logging.info("Added Project: %s", project["title"])
             except Exception as e:
                 logging.error("Failed to insert project: %s", e)
                 conn.rollback()
 
+
 def populate_posts():
     logging.info("----------------Populating Posts----------------")
-    with open('populate/posts.json', 'r') as file:
+    with open("populate/posts.json", "r") as file:
         posts = json.load(file)
 
     with conn.cursor() as cur:
-        cur.execute("SELECT * FROM users")
-        users = cur.fetchall()
+        cur.execute("SELECT id FROM users")
+        user_ids = cur.fetchall()
 
-        if not users:
+        if not user_ids:
             return
 
         for post in posts:
-            post['user_id'] = get_random_user(users)[0]
-            columns = post.keys()
-            values = [post[column] for column in columns]
-            insert_statement = 'INSERT INTO posts (%s) VALUES %s' % (
-                ', '.join(columns), tuple(values))
+            post_data = {
+                "user_id": random.choice(user_ids)[0],
+                "content": post["content"],
+                "tags": to_lowercase_array(post["tags"]),
+            }
+
+            columns = post_data.keys()
+            placeholders = ", ".join(["%s"] * len(columns))
+            insert_statement = (
+                f"INSERT INTO posts ({', '.join(columns)}) VALUES ({placeholders})"
+            )
+
+            values = [
+                post_data["user_id"],
+                post_data["content"],
+                post_data["tags"],
+            ]
             try:
-                cur.execute(insert_statement)
+                cur.execute(insert_statement, values)
                 conn.commit()
             except Exception as e:
                 logging.error("Failed to insert post: %s", e)
                 conn.rollback()
 
+
 def populate_openings():
     logging.info("----------------Populating Openings----------------")
-    with open('populate/openings.json', 'r') as file:
+    with open("populate/openings.json", "r") as file:
         openings = json.load(file)
 
     with conn.cursor() as cur:
-        cur.execute("SELECT * FROM projects")
-        projects = cur.fetchall()
+        cur.execute("SELECT id FROM projects")
+        project_ids = cur.fetchall()
 
-        if not projects:
+        if not project_ids:
             return
 
-        project_ids = [project[0] for project in projects]
-
         for opening in openings:
-            project_id = get_random_project_id(project_ids)
-            opening['project_id'] = project_id
-            cur.execute("SELECT * FROM projects WHERE id = %s", (project_id,))
-            project = cur.fetchone()
-            opening['user_id'] = project[1]
+            project_id = random.choice(project_ids)[0]
 
-            columns = opening.keys()
-            values = [opening[column] for column in columns]
-            insert_statement = 'INSERT INTO openings (%s) VALUES %s' % (
-                ', '.join(columns), tuple(values))
+            cur.execute(
+                "SELECT user_id, title FROM projects WHERE id = %s", (project_id,)
+            )
+            project = cur.fetchone()
+
+            if project:
+                user_id, project_title = project
+
+            opening_data = {
+                "project_id": project_id,
+                "user_id": user_id,
+                "title": opening["title"],
+                "description": opening["description"],
+                "tags": to_lowercase_array(opening["tags"]),
+            }
+
+            columns = opening_data.keys()
+            placeholders = ", ".join(["%s"] * len(columns))
+            insert_statement = (
+                f"INSERT INTO openings ({', '.join(columns)}) VALUES ({placeholders})"
+            )
+
+            values = [
+                opening_data["project_id"],
+                opening_data["user_id"],
+                opening_data["title"],
+                opening_data["description"],
+                opening_data["tags"],
+            ]
             try:
-                cur.execute(insert_statement)
+                cur.execute(insert_statement, values)
                 conn.commit()
-                logging.info("Added Opening: %s, in Project %s", opening['title'], project['title'])
+                logging.info(
+                    "Added Opening: %s, in Project %s",
+                    opening["title"],
+                    project_title,
+                )
             except Exception as e:
                 logging.error("Failed to insert opening: %s", e)
                 conn.rollback()
 
+
 def populate_users_and_orgs():
-    logging.info("----------------Populating Organisations----------------")
-    with open('populate/users.json', 'r') as file:
+    logging.info("----------------Populating Users----------------")
+    with open("populate/users.json", "r") as file:
         users = json.load(file)
 
     with conn.cursor() as cur:
         for user in users:
-            logging.info("Creating User - %s", user['name'])
+            logging.info("Creating User - %s", user["name"])
 
             new_user = {
-                'name': user['name'],
-                'email': user['email'],
-                'password': user['password'],
-                'username': user['username'],
-                'tagline': user['tagline'],
-                'password_changed_at': datetime.now(),
-                'organization_status': user['isOrganization'],
-                'tags': user['tags'],
-                'links': user['links'],
-                'verified': True,
-                'onboarding_completed': True,
+                "id": user["id"],
+                "name": user["name"],
+                "email": user["email"],
+                "password": user["password"],
+                "username": user["username"],
+                "tagline": user["tagline"],
+                "password_changed_at": datetime.now(),
+                "organization_status": user["isOrganization"],
+                "tags": user["tags"],
+                "links": user["links"],
+                "verified": True,
+                "onboarding_completed": True,
             }
 
             columns = new_user.keys()
-            values = [new_user[column] for column in columns]
-            insert_statement = 'INSERT INTO users (%s) VALUES %s' % (
-                ', '.join(columns), tuple(values))
+            placeholders = ", ".join(["%s"] * len(columns))
+            insert_statement = (
+                f'INSERT INTO users ({", ".join(columns)}) VALUES ({placeholders})'
+            )
+
+            values = (
+                new_user["id"],
+                new_user["name"],
+                new_user["email"],
+                new_user["password"],
+                new_user["username"],
+                new_user["tagline"],
+                new_user["password_changed_at"],
+                new_user["organization_status"],
+                new_user["tags"],
+                new_user["links"],
+                new_user["verified"],
+                new_user["onboarding_completed"],
+            )
+
             try:
-                cur.execute(insert_statement)
+                cur.execute(insert_statement, values)
                 conn.commit()
             except Exception as e:
-                logging.error("Error while creating Org User: %s", e)
+                logging.error("Error while creating User: %s", e)
                 conn.rollback()
                 continue
 
-            if new_user['organization_status']:
-                logging.info("Creating Org - %s", user['name'])
+            if new_user["organization_status"] == True:
+                logging.info("Creating Org - %s", user["name"])
                 organization = {
-                    'user_id': new_user['id'],
-                    'organization_title': new_user['name'],
-                    'created_at': datetime.now(),
+                    "user_id": new_user["id"],
+                    "organization_title": new_user["name"],
                 }
                 columns = organization.keys()
                 values = [organization[column] for column in columns]
-                insert_statement = 'INSERT INTO organizations (%s) VALUES %s' % (
-                    ', '.join(columns), tuple(values))
+                insert_statement = "INSERT INTO organizations (%s) VALUES %s" % (
+                    ", ".join(columns),
+                    tuple(values),
+                )
                 try:
                     cur.execute(insert_statement)
                     conn.commit()
@@ -207,15 +294,11 @@ def populate_users_and_orgs():
                     logging.error("Error while creating Org: %s", e)
                     conn.rollback()
 
-            logging.info("Creating Profile - %s", user['name'])
+            logging.info("Creating Profile - %s", user["name"])
 
-            new_profile = {
-                'user_id': new_user['id'],
-            }
-            columns = new_profile.keys()
-            values = [new_profile[column] for column in columns]
-            insert_statement = 'INSERT INTO profiles (%s) VALUES %s' % (
-                ', '.join(columns), tuple(values))
+            insert_statement = "INSERT INTO profiles (user_id) VALUES ('%s')" % (
+                new_user["id"]
+            )
             try:
                 cur.execute(insert_statement)
                 conn.commit()
@@ -223,43 +306,56 @@ def populate_users_and_orgs():
                 logging.error("Error while creating Profile: %s", e)
                 conn.rollback()
 
-            logging.info("Successfully created User - %s", new_user['name'])
+            logging.info("Successfully created User - %s", new_user["name"])
+
 
 def populate_comments():
     logging.info("----------------Populating Comments----------------")
-    with open('populate/comments.json', 'r') as file:
+    with open("populate/comments.json", "r") as file:
         comments = json.load(file)
 
     with conn.cursor() as cur:
         for comment in comments:
             columns = comment.keys()
-            values = [comment[column] for column in columns]
-            insert_statement = 'INSERT INTO comments (%s) VALUES %s' % (
-                ', '.join(columns), tuple(values))
+            values = [
+                comment[column] if comment[column] is not None else None
+                for column in columns
+            ]
+
+            placeholders = ", ".join(["%s"] * len(columns))
+            insert_statement = (
+                f"INSERT INTO comments ({', '.join(columns)}) VALUES ({placeholders})"
+            )
+
+            print(insert_statement)
             try:
-                cur.execute(insert_statement)
+                cur.execute(insert_statement, values)
                 conn.commit()
             except Exception as e:
                 logging.error("Failed to insert comment: %s", e)
                 conn.rollback()
 
+
 def populate_applications():
     logging.info("----------------Populating Applications----------------")
-    with open('populate/applications.json', 'r') as file:
+    with open("populate/applications.json", "r") as file:
         applications = json.load(file)
 
     with conn.cursor() as cur:
         for application in applications:
             columns = application.keys()
             values = [application[column] for column in columns]
-            insert_statement = 'INSERT INTO applications (%s) VALUES %s' % (
-                ', '.join(columns), tuple(values))
+            insert_statement = "INSERT INTO applications (%s) VALUES %s" % (
+                ", ".join(columns),
+                tuple(values),
+            )
             try:
                 cur.execute(insert_statement)
                 conn.commit()
             except Exception as e:
                 logging.error("Failed to insert application: %s", e)
                 conn.rollback()
+
 
 def generate_dummies():
     with conn.cursor() as cur:
@@ -285,10 +381,19 @@ def generate_dummies():
     generate_reports(15, user_ids, post_ids, project_ids, event_ids, opening_ids)
     generate_project_memberships(25, user_ids, project_ids)
 
-    generate_bookmarks("post", 20, user_ids, post_ids, project_ids, opening_ids, event_ids)
-    generate_bookmarks("project", 20, user_ids, post_ids, project_ids, opening_ids, event_ids)
-    generate_bookmarks("opening", 20, user_ids, post_ids, project_ids, opening_ids, event_ids)
-    generate_bookmarks("event", 20, user_ids, post_ids, project_ids, opening_ids, event_ids)
+    generate_bookmarks(
+        "post", 20, user_ids, post_ids, project_ids, opening_ids, event_ids
+    )
+    generate_bookmarks(
+        "project", 20, user_ids, post_ids, project_ids, opening_ids, event_ids
+    )
+    generate_bookmarks(
+        "opening", 20, user_ids, post_ids, project_ids, opening_ids, event_ids
+    )
+    generate_bookmarks(
+        "event", 20, user_ids, post_ids, project_ids, opening_ids, event_ids
+    )
+
 
 def generate_likes(n, user_ids, post_ids, project_ids, event_ids, comment_ids):
     cur = conn.cursor()
@@ -325,7 +430,10 @@ def generate_likes(n, user_ids, post_ids, project_ids, event_ids, comment_ids):
         cur.close()
         conn.close()
 
-def generate_bookmarks(bookmark_type, n, user_ids, post_ids, project_ids, opening_ids, event_ids):
+
+def generate_bookmarks(
+    bookmark_type, n, user_ids, post_ids, project_ids, opening_ids, event_ids
+):
     cur = conn.cursor()
 
     for i in range(n):
@@ -339,10 +447,7 @@ def generate_bookmarks(bookmark_type, n, user_ids, post_ids, project_ids, openin
             """
             cur.execute(query, (bookmark_id, user_id, title))
 
-            items = [
-                (bookmark_id, random.choice(post_ids))
-                for _ in range(10)
-            ]
+            items = [(bookmark_id, random.choice(post_ids)) for _ in range(10)]
             query = """
             INSERT INTO post_bookmark_items (post_bookmark_id, post_id)
             VALUES %s
@@ -355,10 +460,7 @@ def generate_bookmarks(bookmark_type, n, user_ids, post_ids, project_ids, openin
             """
             cur.execute(query, (bookmark_id, user_id, title))
 
-            items = [
-                (bookmark_id, random.choice(project_ids))
-                for _ in range(10)
-            ]
+            items = [(bookmark_id, random.choice(project_ids)) for _ in range(10)]
             query = """
             INSERT INTO project_bookmark_items (project_bookmark_id, project_id)
             VALUES %s
@@ -371,10 +473,7 @@ def generate_bookmarks(bookmark_type, n, user_ids, post_ids, project_ids, openin
             """
             cur.execute(query, (bookmark_id, user_id, title))
 
-            items = [
-                (bookmark_id, random.choice(opening_ids))
-                for _ in range(10)
-            ]
+            items = [(bookmark_id, random.choice(opening_ids)) for _ in range(10)]
             query = """
             INSERT INTO opening_bookmark_items (opening_bookmark_id, opening_id)
             VALUES %s
@@ -387,10 +486,7 @@ def generate_bookmarks(bookmark_type, n, user_ids, post_ids, project_ids, openin
             """
             cur.execute(query, (bookmark_id, user_id, title))
 
-            items = [
-                (bookmark_id, random.choice(event_ids))
-                for _ in range(10)
-            ]
+            items = [(bookmark_id, random.choice(event_ids)) for _ in range(10)]
             query = """
             INSERT INTO event_bookmark_items (event_bookmark_id, event_id)
             VALUES %s
@@ -404,6 +500,7 @@ def generate_bookmarks(bookmark_type, n, user_ids, post_ids, project_ids, openin
     logging.info(f"Generated {n} bookmarks.")
     cur.close()
     conn.close()
+
 
 def generate_reports(n, user_ids, post_ids, project_ids, event_ids, opening_ids):
     cur = conn.cursor()
@@ -426,7 +523,16 @@ def generate_reports(n, user_ids, post_ids, project_ids, event_ids, opening_ids)
         elif choice == 4:
             opening_id = random.choice(opening_ids)
 
-        report = (str(uuid.uuid4()), report_type, reporter_id, user_id, post_id, project_id, event_id, opening_id)
+        report = (
+            str(uuid.uuid4()),
+            report_type,
+            reporter_id,
+            user_id,
+            post_id,
+            project_id,
+            event_id,
+            opening_id,
+        )
         reports.append(report)
 
     query = """
@@ -442,6 +548,7 @@ def generate_reports(n, user_ids, post_ids, project_ids, event_ids, opening_ids)
     finally:
         cur.close()
         conn.close()
+
 
 def generate_project_memberships(n, user_ids, project_ids):
     cur = conn.cursor()

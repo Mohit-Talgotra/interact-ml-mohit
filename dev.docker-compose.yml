@@ -5,21 +5,21 @@ networks:
     driver: bridge
 
 services:
-  ml-api:
-    container_name: interact-ml
-    build:
-      context: .
-      dockerfile: dev.DockerFile
-    restart: always
-    ports:
-      - "3030:3030"
-    depends_on:
-      - postgres
-    volumes:
-      - ./models:/app/models
-      - ./logs:/app/logs
-    networks:
-      - ml-network
+  # ml-api:
+  #   container_name: interact-ml
+  #   build:
+  #     context: .
+  #     dockerfile: dev.DockerFile
+  #   restart: always
+  #   ports:
+  #     - "3030:3030"
+  #   depends_on:
+  #     - postgres
+  #   volumes:
+  #     - ./models:/app/models
+  #     - ./logs:/app/logs
+  #   networks:
+  #     - ml-network
 
   postgres:
     container_name: postgres-db
@@ -31,10 +31,10 @@ services:
       - .env
     environment:
       - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_PASSWORD=${DB_PASS}
       - POSTGRES_USER=${DB_USER}
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - ml-postgres:/var/lib/postgresql/data
     networks:
       - ml-network
     healthcheck:
@@ -42,3 +42,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 3
+
+volumes:
+  ml-postgres:
+    name: postgres-db
+    driver: local

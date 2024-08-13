@@ -1,3 +1,5 @@
 # RUN THIS
 
 sudo docker network connect interact_go_backend-network interact-ml 
+
+For DEV setup, USE: docker-compose -f dev.docker-compose.yml
