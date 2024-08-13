@@ -1,0 +1,22 @@
+[
+  {
+    "id": "98765432-10ab-cdef-fedc-ba0987654321",
+    "userID": "98765432-10ab-cdef-fedc-ba0987654321",
+    "OrganizationTitle": "Acme Technologies Inc."
+  },
+  {
+    "id": "fedcba09-8765-4321-abcd-1234567890ab",
+    "userID": "fedcba09-8765-4321-abcd-1234567890ab",
+    "OrganizationTitle": "Greenpeace International"
+  },
+  {
+    "id": "12345678-abcd-ef12-3456-7890abcdef12",
+    "userID": "12345678-abcd-ef12-3456-7890abcdef12",
+    "OrganizationTitle": "Médecins Sans Frontières (MSF)"
+  },
+  {
+    "id": "12345678-abcd-4321-ef98-ba0987654321",
+    "userID": "a1b9c3d2-8765-4321-abcd-1234567890ab",
+    "OrganizationTitle": "Interact"
+  }
+]
