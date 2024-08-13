@@ -12,8 +12,12 @@ from typing import List
 from dotenv import load_dotenv
 from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification
 from transformers import pipeline
+import populate.main as populate
 
 load_dotenv()
+
+if os.getenv("POPULATE_DUMMIES") == True:
+    populate.fill_dummies()
 
 app = FastAPI()
 

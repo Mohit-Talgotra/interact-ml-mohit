@@ -5,15 +5,31 @@ import psycopg2
 from psycopg2.extras import execute_values
 from datetime import datetime
 import uuid
+import os
 
-# Assuming connection to PostgreSQL is already established
-# Replace these values with your actual database configuration
-conn = psycopg2.connect(
-    dbname='your_db',
-    user='your_user',
-    password='your_password',
-    host='your_host'
-)
+logging.basicConfig(level=logging.INFO)
+
+conn = None
+
+try:
+    conn = psycopg2.connect(
+        database=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASS"),
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT")
+    )
+except Exception as e:
+    logging.error("Error while populating dummies.", e)
+
+def fill_dummies():
+    populate_users_and_orgs()
+    populate_projects()
+    populate_posts()
+    populate_openings()
+    populate_comments()
+    populate_applications()
+    generate_dummies()
 
 def to_lowercase_array(arr):
     return [str.lower() for str in arr]
@@ -245,12 +261,6 @@ def populate_applications():
                 logging.error("Failed to insert application: %s", e)
                 conn.rollback()
 
-def fill_dummies():
-    populate_projects()
-    populate_posts()
-    populate_openings()
-    generate_dummies()
-
 def generate_dummies():
     with conn.cursor() as cur:
         cur.execute("SELECT id FROM users")
@@ -280,22 +290,7 @@ def generate_dummies():
     generate_bookmarks("opening", 20, user_ids, post_ids, project_ids, opening_ids, event_ids)
     generate_bookmarks("event", 20, user_ids, post_ids, project_ids, opening_ids, event_ids)
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-
-# Database connection
-def get_db_connection():
-    return psycopg2.connect(
-        dbname="your_database",
-        user="your_username",
-        password="your_password",
-        host="your_host",
-        port="your_port"
-    )
-
-# Generate Likes
 def generate_likes(n, user_ids, post_ids, project_ids, event_ids, comment_ids):
-    conn = get_db_connection()
     cur = conn.cursor()
 
     likes = []
@@ -330,9 +325,7 @@ def generate_likes(n, user_ids, post_ids, project_ids, event_ids, comment_ids):
         cur.close()
         conn.close()
 
-# Generate Bookmarks
 def generate_bookmarks(bookmark_type, n, user_ids, post_ids, project_ids, opening_ids, event_ids):
-    conn = get_db_connection()
     cur = conn.cursor()
 
     for i in range(n):
@@ -412,9 +405,7 @@ def generate_bookmarks(bookmark_type, n, user_ids, post_ids, project_ids, openin
     cur.close()
     conn.close()
 
-# Generate Reports
 def generate_reports(n, user_ids, post_ids, project_ids, event_ids, opening_ids):
-    conn = get_db_connection()
     cur = conn.cursor()
 
     reports = []
@@ -452,9 +443,7 @@ def generate_reports(n, user_ids, post_ids, project_ids, event_ids, opening_ids)
         cur.close()
         conn.close()
 
-# Generate Project Memberships
 def generate_project_memberships(n, user_ids, project_ids):
-    conn = get_db_connection()
     cur = conn.cursor()
 
     roles = ["ProjectMember", "ProjectEditor", "ProjectManager"]
