@@ -43,6 +43,8 @@ fi
 if [ "$BUILD_FLAG" = true ] || [ "$CONFLICT_FLAG" = true ]; then
     echo "Building and starting containers..."
     docker-compose -f dev.docker-compose.yml up --build -d
+    docker exec -i postgres-ml-db psql -U postgres -f /docker-entrypoint-initdb.d/init.sql
+    docker exec -i postgres-ml-db psql -U postgres -f /docker-entrypoint-initdb.d/init.sql
 else
     echo "Starting containers..."
     docker-compose -f dev.docker-compose.yml up -d
