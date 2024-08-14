@@ -31,14 +31,14 @@ except Exception as e:
 
 
 def fill_dummies():
-    populate_users_and_orgs()
-    populate_projects()
-    populate_posts()
-    populate_openings()
-    populate_events()
-    populate_comments()
-    populate_applications()
-    # generate_dummies()
+    # populate_users_and_orgs()
+    # populate_projects()
+    # populate_posts()
+    # populate_openings()
+    # populate_events()
+    # populate_comments()
+    # populate_applications()
+    generate_dummies()
 
 
 def to_lowercase_array(arr):
@@ -449,211 +449,230 @@ def generate_dummies():
     generate_project_memberships(25, user_ids, project_ids)
 
     generate_bookmarks(
-        "post", 20, user_ids, post_ids, project_ids, opening_ids, event_ids
+        "post", 20, 10, user_ids, post_ids, project_ids, opening_ids, event_ids
     )
     generate_bookmarks(
-        "project", 20, user_ids, post_ids, project_ids, opening_ids, event_ids
+        "project", 20, 10, user_ids, post_ids, project_ids, opening_ids, event_ids
     )
     generate_bookmarks(
-        "opening", 20, user_ids, post_ids, project_ids, opening_ids, event_ids
+        "opening", 20, 10, user_ids, post_ids, project_ids, opening_ids, event_ids
     )
     generate_bookmarks(
-        "event", 20, user_ids, post_ids, project_ids, opening_ids, event_ids
+        "event", 20, 10, user_ids, post_ids, project_ids, opening_ids, event_ids
     )
 
 
 def generate_likes(n, user_ids, post_ids, project_ids, event_ids, comment_ids):
-    cur = conn.cursor()
+    with conn.cursor() as cur:
 
-    likes = []
-    for _ in range(n):
-        user_id = random.choice(user_ids)
+        likes = []
+        for _ in range(n):
+            user_id = random.choice(user_ids)
 
-        post_id = project_id = event_id = comment_id = None
-        choice = random.randint(0, 3)
-        if choice == 0:
-            post_id = random.choice(post_ids)
-        elif choice == 1:
-            project_id = random.choice(project_ids)
-        elif choice == 2:
-            event_id = random.choice(event_ids)
-        elif choice == 3:
-            comment_id = random.choice(comment_ids)
+            post_id = project_id = event_id = comment_id = None
+            choice = random.randint(0, 3)
+            if choice == 0:
+                post_id = random.choice(post_ids)
+            elif choice == 1:
+                project_id = random.choice(project_ids)
+            elif choice == 2:
+                event_id = random.choice(event_ids)
+            elif choice == 3:
+                comment_id = random.choice(comment_ids)
 
-        like = (str(uuid.uuid4()), user_id, post_id, project_id, event_id, comment_id)
-        likes.append(like)
+            like = (
+                str(uuid.uuid4()),
+                user_id,
+                post_id,
+                project_id,
+                event_id,
+                comment_id,
+            )
+            likes.append(like)
 
-    query = """
-    INSERT INTO likes (id, user_id, post_id, project_id, event_id, comment_id)
-    VALUES %s
-    """
-    try:
-        execute_values(cur, query, likes)
-        conn.commit()
-        logging.info(f"Generated {n} likes.")
-    except Exception as e:
-        logging.error("Error while creating likes.", e)
-    finally:
-        cur.close()
-        conn.close()
-
-
-def generate_bookmarks(
-    bookmark_type, n, user_ids, post_ids, project_ids, opening_ids, event_ids
-):
-    cur = conn.cursor()
-
-    for i in range(n):
-        user_id = random.choice(user_ids)
-        title = f"Bookmark {i}"
-        bookmark_id = str(uuid.uuid4())
-
-        if bookmark_type == "post":
-            query = """
-            INSERT INTO post_bookmarks (id, user_id, title) VALUES (%s, %s, %s)
-            """
-            cur.execute(query, (bookmark_id, user_id, title))
-
-            items = [(bookmark_id, random.choice(post_ids)) for _ in range(10)]
-            query = """
-            INSERT INTO post_bookmark_items (post_bookmark_id, post_id)
-            VALUES %s
-            """
-            execute_values(cur, query, items)
-
-        elif bookmark_type == "project":
-            query = """
-            INSERT INTO project_bookmarks (id, user_id, title) VALUES (%s, %s, %s)
-            """
-            cur.execute(query, (bookmark_id, user_id, title))
-
-            items = [(bookmark_id, random.choice(project_ids)) for _ in range(10)]
-            query = """
-            INSERT INTO project_bookmark_items (project_bookmark_id, project_id)
-            VALUES %s
-            """
-            execute_values(cur, query, items)
-
-        elif bookmark_type == "opening":
-            query = """
-            INSERT INTO opening_bookmarks (id, user_id, title) VALUES (%s, %s, %s)
-            """
-            cur.execute(query, (bookmark_id, user_id, title))
-
-            items = [(bookmark_id, random.choice(opening_ids)) for _ in range(10)]
-            query = """
-            INSERT INTO opening_bookmark_items (opening_bookmark_id, opening_id)
-            VALUES %s
-            """
-            execute_values(cur, query, items)
-
-        elif bookmark_type == "event":
-            query = """
-            INSERT INTO event_bookmarks (id, user_id, title) VALUES (%s, %s, %s)
-            """
-            cur.execute(query, (bookmark_id, user_id, title))
-
-            items = [(bookmark_id, random.choice(event_ids)) for _ in range(10)]
-            query = """
-            INSERT INTO event_bookmark_items (event_bookmark_id, event_id)
-            VALUES %s
-            """
-            execute_values(cur, query, items)
-
-        else:
-            logging.error("Invalid bookmark type:", bookmark_type)
-
-    conn.commit()
-    logging.info(f"Generated {n} bookmarks.")
-    cur.close()
-    conn.close()
+        query = """
+        INSERT INTO likes (id, user_id, post_id, project_id, event_id, comment_id)
+        VALUES %s
+        """
+        try:
+            execute_values(cur, query, likes)
+            conn.commit()
+            logging.info(f"Generated {n} likes.")
+        except Exception as e:
+            logging.error("Error while creating likes.", e)
+            conn.rollback()
 
 
 def generate_reports(n, user_ids, post_ids, project_ids, event_ids, opening_ids):
-    cur = conn.cursor()
+    with conn.cursor() as cur:
 
-    reports = []
-    for _ in range(n):
-        reporter_id = random.choice(user_ids)
-        report_type = random.randint(0, 8)
+        reports = []
+        for _ in range(n):
+            reporter_id = random.choice(user_ids)
+            report_type = random.randint(0, 8)
 
-        post_id = project_id = event_id = user_id = opening_id = None
-        choice = random.randint(0, 4)
-        if choice == 0:
-            post_id = random.choice(post_ids)
-        elif choice == 1:
-            project_id = random.choice(project_ids)
-        elif choice == 2:
-            event_id = random.choice(event_ids)
-        elif choice == 3:
-            user_id = random.choice(user_ids)
-        elif choice == 4:
-            opening_id = random.choice(opening_ids)
+            post_id = project_id = event_id = user_id = opening_id = None
+            choice = random.randint(0, 4)
+            if choice == 0:
+                post_id = random.choice(post_ids)
+            elif choice == 1:
+                project_id = random.choice(project_ids)
+            elif choice == 2:
+                event_id = random.choice(event_ids)
+            elif choice == 3:
+                user_id = random.choice(user_ids)
+            elif choice == 4:
+                opening_id = random.choice(opening_ids)
 
-        report = (
-            str(uuid.uuid4()),
-            report_type,
-            reporter_id,
-            user_id,
-            post_id,
-            project_id,
-            event_id,
-            opening_id,
-        )
-        reports.append(report)
+            report = (
+                str(uuid.uuid4()),
+                report_type,
+                reporter_id,
+                user_id,
+                post_id,
+                project_id,
+                event_id,
+                opening_id,
+            )
+            reports.append(report)
 
-    query = """
-    INSERT INTO reports (id, report_type, reporter_id, user_id, post_id, project_id, event_id, opening_id)
-    VALUES %s
-    """
-    try:
-        execute_values(cur, query, reports)
-        conn.commit()
-        logging.info(f"Generated {n} reports.")
-    except Exception as e:
-        logging.error("Error while creating reports.", e)
-    finally:
-        cur.close()
-        conn.close()
+        query = """
+        INSERT INTO reports (id, report_type, reporter_id, user_id, post_id, project_id, event_id, opening_id)
+        VALUES %s
+        """
+        try:
+            execute_values(cur, query, reports)
+            conn.commit()
+            logging.info(f"Generated {n} reports.")
+        except Exception as e:
+            logging.error("Error while creating reports.", e)
+            conn.rollback()
 
 
 def generate_project_memberships(n, user_ids, project_ids):
-    cur = conn.cursor()
+    with conn.cursor() as cur:
 
-    roles = ["ProjectMember", "ProjectEditor", "ProjectManager"]
-    titles = [
-        "Lead Developer",
-        "Project Coordinator",
-        "Team Lead",
-        "Senior Developer",
-        "Junior Developer",
-        "Project Analyst",
-        "Product Manager",
-        "Technical Lead",
-        "Project Supervisor",
-        "Quality Assurance",
-    ]
+        roles = ["ProjectMember", "ProjectEditor", "ProjectManager"]
+        titles = [
+            "Lead Developer",
+            "Project Coordinator",
+            "Team Lead",
+            "Senior Developer",
+            "Junior Developer",
+            "Project Analyst",
+            "Product Manager",
+            "Technical Lead",
+            "Project Supervisor",
+            "Quality Assurance",
+        ]
 
-    memberships = []
-    for _ in range(n):
-        user_id = random.choice(user_ids)
-        project_id = random.choice(project_ids)
-        role = random.choice(roles)
-        title = random.choice(titles)
+        memberships = []
+        for _ in range(n):
+            user_id = random.choice(user_ids)
+            project_id = random.choice(project_ids)
+            role = random.choice(roles)
+            title = random.choice(titles)
 
-        membership = (str(uuid.uuid4()), project_id, user_id, role, title)
-        memberships.append(membership)
+            membership = (str(uuid.uuid4()), project_id, user_id, role, title)
+            memberships.append(membership)
 
-    query = """
-    INSERT INTO memberships (id, project_id, user_id, role, title)
-    VALUES %s
-    """
-    try:
-        execute_values(cur, query, memberships)
-        conn.commit()
-        logging.info(f"Generated {n} memberships.")
-    except Exception as e:
-        logging.error("Error while creating memberships.", e)
-    finally:
-        cur.close()
-        conn.close()
+        query = """
+        INSERT INTO memberships (id, project_id, user_id, role, title)
+        VALUES %s
+        """
+        try:
+            execute_values(cur, query, memberships)
+            conn.commit()
+            logging.info(f"Generated {n} memberships.")
+        except Exception as e:
+            logging.error("Error while creating memberships.", e)
+            conn.rollback()
+
+
+def generate_bookmarks(
+    bookmark_type,
+    n,
+    item_count,
+    user_ids,
+    post_ids,
+    project_ids,
+    opening_ids,
+    event_ids,
+):
+    with conn.cursor() as cur:
+        for i in range(n):
+            user_id = random.choice(user_ids)
+            title = f"Bookmark {i}"
+            bookmark_id = str(uuid.uuid4())
+
+            if bookmark_type == "post":
+                query = """
+                INSERT INTO post_bookmarks (id, user_id, title) VALUES (%s, %s, %s)
+                """
+                cur.execute(query, (bookmark_id, user_id, title))
+
+                items = [
+                    (bookmark_id, random.choice(post_ids)) for _ in range(item_count)
+                ]
+                query = """
+                INSERT INTO post_bookmark_items (post_bookmark_id, post_id)
+                VALUES %s
+                """
+                execute_values(cur, query, items)
+
+            elif bookmark_type == "project":
+                query = """
+                INSERT INTO project_bookmarks (id, user_id, title) VALUES (%s, %s, %s)
+                """
+                cur.execute(query, (bookmark_id, user_id, title))
+
+                items = [
+                    (bookmark_id, random.choice(project_ids)) for _ in range(item_count)
+                ]
+                query = """
+                INSERT INTO project_bookmark_items (project_bookmark_id, project_id)
+                VALUES %s
+                """
+                execute_values(cur, query, items)
+
+            elif bookmark_type == "opening":
+                query = """
+                INSERT INTO opening_bookmarks (id, user_id, title) VALUES (%s, %s, %s)
+                """
+                cur.execute(query, (bookmark_id, user_id, title))
+
+                items = [
+                    (bookmark_id, random.choice(opening_ids)) for _ in range(item_count)
+                ]
+                query = """
+                INSERT INTO opening_bookmark_items (opening_bookmark_id, opening_id)
+                VALUES %s
+                """
+                execute_values(cur, query, items)
+
+            elif bookmark_type == "event":
+                query = """
+                INSERT INTO event_bookmarks (id, user_id, title) VALUES (%s, %s, %s)
+                """
+                cur.execute(query, (bookmark_id, user_id, title))
+
+                items = [
+                    (bookmark_id, random.choice(event_ids)) for _ in range(item_count)
+                ]
+                query = """
+                INSERT INTO event_bookmark_items (event_bookmark_id, event_id)
+                VALUES %s
+                """
+                execute_values(cur, query, items)
+
+            else:
+                logging.error("Invalid bookmark type:", bookmark_type)
+
+        try:
+            conn.commit()
+            logging.info(
+                f"Generated {n} {bookmark_type} bookmarks with {item_count} items each."
+            )
+        except Exception as e:
+            logging.error("Error while creating bookmarks.", e)
+            conn.rollback()
