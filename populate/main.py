@@ -35,8 +35,9 @@ def fill_dummies():
     populate_projects()
     populate_posts()
     populate_openings()
-    # populate_comments()
-    # populate_applications()
+    populate_events()
+    populate_comments()
+    populate_applications()
     # generate_dummies()
 
 
@@ -52,7 +53,7 @@ def random_links():
         "https://www.gmail.com",
         "https://www.github.com",
     ]
-    count = random.randint(0, 5)
+    count = random.randint(0, 4)
     random.shuffle(links)
     return links[:count]
 
@@ -107,6 +108,7 @@ def populate_projects():
             )
 
             values = [
+                project_data["id"],
                 project_data["user_id"],
                 project_data["title"],
                 project_data["slug"],
@@ -155,6 +157,7 @@ def populate_posts():
             )
 
             values = [
+                post_data["id"],
                 post_data["user_id"],
                 post_data["content"],
                 post_data["tags"],
@@ -206,6 +209,7 @@ def populate_openings():
             )
 
             values = [
+                opening_data["id"],
                 opening_data["project_id"],
                 opening_data["user_id"],
                 opening_data["title"],
@@ -280,10 +284,19 @@ def populate_users_and_orgs():
 
             if new_user["organization_status"] == True:
                 logging.info("Creating Org - %s", user["name"])
+
                 organization = {
                     "user_id": new_user["id"],
                     "organization_title": new_user["name"],
                 }
+
+                with open("populate/organisations.json", "r") as file:
+                    organisations = json.load(file)
+
+                for organisation in organisations:
+                    if organisation["userID"] == organization["user_id"]:
+                        organization["id"] = organisation["id"]
+
                 columns = organization.keys()
                 values = [organization[column] for column in columns]
                 insert_statement = "INSERT INTO organizations (%s) VALUES %s" % (
@@ -312,6 +325,58 @@ def populate_users_and_orgs():
             logging.info("Successfully created User - %s", new_user["name"])
 
 
+def populate_events():
+    logging.info("----------------Populating Events----------------")
+    with open("populate/events.json", "r") as file:
+        events = json.load(file)
+
+    with conn.cursor() as cur:
+        for event in events:
+
+            event_data = {
+                "id": event["id"],
+                "title": event["title"],
+                "tagline": event["tagline"],
+                "links": event["links"],
+                "description": event["description"],
+                "tags": to_lowercase_array(event["tags"]),
+                "start_time": event["startTime"],
+                "end_time": event["endTime"],
+                "location": event["location"],
+                "category": event["category"],
+                "impressions": event["noImpressions"],
+                "organization_id": event["organizationID"],
+            }
+
+            columns = event_data.keys()
+            placeholders = ", ".join(["%s"] * len(columns))
+            insert_statement = (
+                f"INSERT INTO events ({', '.join(columns)}) VALUES ({placeholders})"
+            )
+
+            values = [
+                event["id"],
+                event["title"],
+                event["tagline"],
+                event["links"],
+                event["description"],
+                event["tags"],
+                event["startTime"],
+                event["endTime"],
+                event["location"],
+                event["category"],
+                event["noImpressions"],
+                event["organizationID"],
+            ]
+            try:
+                cur.execute(insert_statement, values)
+                conn.commit()
+                logging.info("Added Event: %s", event["title"])
+            except Exception as e:
+                logging.error("Failed to insert opening: %s", e)
+                conn.rollback()
+
+
 def populate_comments():
     logging.info("----------------Populating Comments----------------")
     with open("populate/comments.json", "r") as file:
@@ -330,7 +395,6 @@ def populate_comments():
                 f"INSERT INTO comments ({', '.join(columns)}) VALUES ({placeholders})"
             )
 
-            print(insert_statement)
             try:
                 cur.execute(insert_statement, values)
                 conn.commit()

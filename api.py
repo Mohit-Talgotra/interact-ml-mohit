@@ -17,7 +17,8 @@ import populate.main as populate
 load_dotenv()
 
 if os.getenv("POPULATE") == "TRUE" and os.getenv("ENV") == "development":
-    populate()
+    populate.fill_dummies()
+    os._exit(1)
 
 app = FastAPI()
 
