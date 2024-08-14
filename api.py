@@ -10,11 +10,14 @@ import controllers.miscellaneous as miscellaneous_controllers
 import os
 from typing import List
 from dotenv import load_dotenv
-from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModel
 from transformers import pipeline
 import populate.main as populate
 
 load_dotenv()
+
+if os.getenv("POPULATE") == "TRUE" and os.getenv("ENV") == "development":
+    populate()
 
 app = FastAPI()
 

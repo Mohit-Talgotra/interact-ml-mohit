@@ -87,6 +87,7 @@ def populate_projects():
 
         for project in projects:
             project_data = {
+                "id": project["id"],
                 "user_id": random.choice(user_ids)[0],
                 "title": project["title"],
                 "slug": soft_slugify(project["title"]),
@@ -141,6 +142,7 @@ def populate_posts():
 
         for post in posts:
             post_data = {
+                "id": post["id"],
                 "user_id": random.choice(user_ids)[0],
                 "content": post["content"],
                 "tags": to_lowercase_array(post["tags"]),
@@ -189,6 +191,7 @@ def populate_openings():
                 user_id, project_title = project
 
             opening_data = {
+                "id": opening["id"],
                 "project_id": project_id,
                 "user_id": user_id,
                 "title": opening["title"],

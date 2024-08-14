@@ -22,7 +22,7 @@ services:
   #     - ml-network
 
   postgres:
-    container_name: postgres-db
+    container_name: postgres-ml-db
     image: postgres:16
     restart: always
     ports:
@@ -35,6 +35,7 @@ services:
       - POSTGRES_USER=${DB_USER}
     volumes:
       - ml-postgres:/var/lib/postgresql/data
+      - ./populate/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - ml-network
     healthcheck:
@@ -45,5 +46,5 @@ services:
 
 volumes:
   ml-postgres:
-    name: postgres-db
+    name: postgres-ml-db
     driver: local
