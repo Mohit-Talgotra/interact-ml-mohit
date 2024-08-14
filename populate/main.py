@@ -31,13 +31,13 @@ except Exception as e:
 
 
 def fill_dummies():
-    # populate_users_and_orgs()
-    # populate_projects()
-    # populate_posts()
-    # populate_openings()
-    # populate_events()
-    # populate_comments()
-    # populate_applications()
+    populate_users_and_orgs()
+    populate_projects()
+    populate_posts()
+    populate_openings()
+    populate_events()
+    populate_comments()
+    populate_applications()
     generate_dummies()
 
 
@@ -444,6 +444,7 @@ def generate_dummies():
         cur.execute("SELECT id FROM comments")
         comment_ids = cur.fetchall()
 
+    generate_followers(50, user_ids)
     generate_likes(50, user_ids, post_ids, project_ids, event_ids, comment_ids)
     generate_reports(15, user_ids, post_ids, project_ids, event_ids, opening_ids)
     generate_project_memberships(25, user_ids, project_ids)
@@ -460,6 +461,37 @@ def generate_dummies():
     generate_bookmarks(
         "event", 20, 10, user_ids, post_ids, project_ids, opening_ids, event_ids
     )
+
+
+def generate_followers(n, user_ids):
+    with conn.cursor() as cur:
+
+        follow_followers_set = set()
+
+        while len(follow_followers_set) < n:
+            follower_id = random.choice(user_ids)
+            followed_id = random.choice(user_ids)
+
+            while followed_id == follower_id:
+                followed_id = random.choice(user_ids)
+
+            follow_follower = (follower_id, followed_id)
+
+            follow_followers_set.add(follow_follower)
+
+        follow_followers_list = list(follow_followers_set)
+
+        query = """
+        INSERT INTO follow_followers (follower_id, followed_id)
+        VALUES %s
+        """
+        try:
+            execute_values(cur, query, follow_followers_list)
+            conn.commit()
+            logging.info(f"Generated {n} followers.")
+        except Exception as e:
+            logging.error("Error while creating followers.", e)
+            conn.rollback()
 
 
 def generate_likes(n, user_ids, post_ids, project_ids, event_ids, comment_ids):
