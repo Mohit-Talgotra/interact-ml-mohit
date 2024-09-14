@@ -35,6 +35,7 @@ POPULATE = "FALSE"
 
 1. Steps to run both api and DB on docker 
 - First Uncomment ml-api section in dev.docker-compose.yml file
+- Change DB_HOST = "postgres-ml-db" (in .env file)
 - Run the following commands
   1. chmod +x ./build-container.sh
   2. ./build-container.sh -build (run ./build-container.sh -build -populate -> if u want to populate dummies)
