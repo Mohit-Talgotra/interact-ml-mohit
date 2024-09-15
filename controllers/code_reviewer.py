@@ -1,9 +1,8 @@
 import json
-#import from submodule
-from src.chunker2.chunk_extractor import ChunkExtractor2
-from src.code_analyser.code_analyser import CodeAnalyser
-from src.fetcher.git_handler import GitHandler
-from src.fetcher.repository_manager import RepositoryManager
+from code_review.src.chunker2.chunk_extractor import ChunkExtractor2
+from code_review.src.code_analyser.code_analyser import CodeAnalyser
+from code_review.src.fetcher.git_handler import GitHandler
+from code_review.src.fetcher.repository_manager import RepositoryManager
 import logging
 
 def codeReview(body):
@@ -34,12 +33,11 @@ def codeReviewer(repos):
     logger = logging.getLogger(__name__)
     if repos != []:
         repos = eval(repos)
-        print(repos)
     else:
         logger.info("Please provide a repository URL")
         return
     
-    cloneRepoPath = "./cloned_repos"
+    cloneRepoPath = "code_review/cloned_repos"
 
     chunk_extractor = ChunkExtractor2()
     code_analyser = CodeAnalyser()

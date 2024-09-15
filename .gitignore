@@ -5,3 +5,4 @@ __pycache__
 /logs
 /models
 venv/*
+code_review/cloned_repos/*
