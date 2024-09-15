@@ -14,10 +14,8 @@ def codeReview(body):
     repos = json.dumps(body['repo_links'])
 
     try:
-        codeReviewer(repos)
-        return {
-            "message": f"Repository analysis completed successfully.", "error": None
-        }
+        scores = codeReviewer(repos)
+        return scores
     except Exception as e:
         return {
             "message": f"Error executing script", "error": str(e)
@@ -47,5 +45,5 @@ def codeReviewer(repos):
         fetch_repository(repo, cloneRepoPath)
     
     chunk_extractor.processRepos(cloneRepoPath)
-    code_analyser.processRepos(cloneRepoPath)
-    repo_manager.complete_cleanup()
+    scores = code_analyser.processRepos(cloneRepoPath)
+    return scores
