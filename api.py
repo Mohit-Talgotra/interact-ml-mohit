@@ -43,7 +43,7 @@ class ContentBody(BaseModel):
     content: str
 
 class CodeReviewBody(BaseModel):
-    content: List[str]
+    repo_links: List[str]
 
 class ApplicationScoreBody(BaseModel):
     cover_letter: str

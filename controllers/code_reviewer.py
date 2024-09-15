@@ -34,8 +34,7 @@ def codeReviewer(repos):
     if repos != []:
         repos = eval(repos)
     else:
-        logger.info("Please provide a repository URL")
-        return
+        return []
     
     cloneRepoPath = "code_review/cloned_repos"
 
@@ -47,6 +46,6 @@ def codeReviewer(repos):
     for repo in repos:
         fetch_repository(repo, cloneRepoPath)
     
-    repo_manager.complete_cleanup()
     chunk_extractor.processRepos(cloneRepoPath)
     code_analyser.processRepos(cloneRepoPath)
+    repo_manager.complete_cleanup()
