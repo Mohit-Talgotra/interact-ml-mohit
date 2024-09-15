@@ -7,6 +7,7 @@ import controllers.posts as post_controllers
 import controllers.openings as opening_controllers
 import controllers.applications as application_controllers
 import controllers.miscellaneous as miscellaneous_controllers
+import controllers.code_reviewer as code_review_controllers
 import os
 from typing import List
 from dotenv import load_dotenv
@@ -41,6 +42,8 @@ class ReqBody(BaseModel):
 class ContentBody(BaseModel):
     content: str
 
+class CodeReviewBody(BaseModel):
+    repo_links: List[str]
 
 class ApplicationScoreBody(BaseModel):
     cover_letter: str
@@ -145,6 +148,9 @@ async def check_toxicity(body: ContentBody, request: Request):
 async def check_toxicity(image: UploadFile, request: Request):
     return miscellaneous_controllers.check_image_profanity(image, request)
 
+@app.post("/code_review")
+async def code_review(body: CodeReviewBody):
+    return code_review_controllers.codeReview(body)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=os.getenv("PORT"))

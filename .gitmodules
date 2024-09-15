@@ -1,0 +1,3 @@
+[submodule "code_review"]
+	path = code_review
+	url = https://github.com/yashwantherukulla/interact-ml-code-review.git
