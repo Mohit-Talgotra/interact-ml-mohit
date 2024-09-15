@@ -13,15 +13,25 @@ COPY requirements.txt /app/
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the current directory contents into the container at /app
+# Copy the current directory contents, including submodules, into the container at /app
 COPY . /app
+
+# Navigate to the submodule directory and install additional requirements
+WORKDIR /app/code_review
+
+# Install the submodule's requirements
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Return to the main working directory
+WORKDIR /app
 
 # Make port 3030 available to the world outside this container
 EXPOSE 3030
 
+# Ensure the trainer.py script is executable
 RUN chmod +x /app/trainer.py
 
-# Run trainer.py immediately when the container starts
+# Run the trainer.py script
 RUN /usr/bin/python3 /app/trainer.py
 
 # Apply the cron job
@@ -31,7 +41,7 @@ RUN crontab /app/cron
 # Copy the entrypoint script into the container at /app
 COPY entrypoint.sh /app/
 
-# Make the script executable
+# Make the entrypoint script executable
 RUN chmod +x /app/entrypoint.sh
 
 # Run the entrypoint script
