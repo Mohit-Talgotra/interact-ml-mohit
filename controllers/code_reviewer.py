@@ -1,49 +1,42 @@
-import json
 from code_review.src.chunker2.chunk_extractor import ChunkExtractor2
 from code_review.src.code_analyser.code_analyser import CodeAnalyser
 from code_review.src.fetcher.git_handler import GitHandler
 from code_review.src.fetcher.repository_manager import RepositoryManager
-import logging
+import concurrent.futures
 
-def codeReview(body):
-    if body == None:
-        return {
-            "message": "Repository links are required", "error": "Bad Request"
-        }
 
-    repos = json.dumps(body['repo_links'])
+def review_code(body):
+    if body == None or body.repo_links == None:
+        return {"message": "Repository links are required", "error": "Bad Request"}
 
     try:
-        scores = codeReviewer(repos)
+        repos = body.repo_links
+
+        cloneRepoPath = "code_review/cloned_repos"
+
+        git_handler = GitHandler()
+        repo_manager = RepositoryManager(git_handler)
+        chunk_extractor = ChunkExtractor2()
+        code_analyser = CodeAnalyser()
+
+        def process_single_repo(repo):
+            try:
+                repo_manager.clone_repository(repo, cloneRepoPath)
+            except Exception as e:
+                print(f"Error cloning repo {repo}: {e}")
+                return None
+
+        # Use ThreadPoolExecutor to parallelize the repository cloning
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Submit tasks to the executor to run in parallel
+            futures = [executor.submit(process_single_repo, repo) for repo in repos]
+            concurrent.futures.wait(futures)
+
+        chunk_extractor.processRepos(cloneRepoPath)
+        scores = code_analyser.processAllRepos(cloneRepoPath)
+        repo_manager.complete_cleanup()
+
         return scores
+
     except Exception as e:
-        return {
-            "message": f"Error executing script", "error": str(e)
-        }
-
-def fetch_repository(url: str, base_path: str) -> str:
-    git_handler = GitHandler()
-    repo_manager = RepositoryManager(git_handler)
-    
-    repo_manager.clone_repository(url, base_path)
-
-def codeReviewer(repos):
-    logger = logging.getLogger(__name__)
-    if repos != []:
-        repos = eval(repos)
-    else:
-        return []
-    
-    cloneRepoPath = "code_review/cloned_repos"
-
-    chunk_extractor = ChunkExtractor2()
-    code_analyser = CodeAnalyser()
-    git_handler = GitHandler()
-    repo_manager = RepositoryManager(git_handler)
-
-    for repo in repos:
-        fetch_repository(repo, cloneRepoPath)
-    
-    chunk_extractor.processRepos(cloneRepoPath)
-    scores = code_analyser.processRepos(cloneRepoPath)
-    return scores
+        return {"message": f"Error fetching code review", "error": str(e)}

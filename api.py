@@ -13,12 +13,13 @@ from typing import List
 from dotenv import load_dotenv
 from transformers import AutoTokenizer, AutoModel
 from transformers import pipeline
-import populate.main as populate
+
+# import populate.main as populate
 
 load_dotenv()
 
-if os.getenv("POPULATE") == "TRUE" and os.getenv("ENV") == "development":
-    populate.fill_dummies()
+# if os.getenv("POPULATE") == "TRUE" and os.getenv("ENV") == "development":
+#     populate.fill_dummies()
 
 app = FastAPI()
 
@@ -42,8 +43,10 @@ class ReqBody(BaseModel):
 class ContentBody(BaseModel):
     content: str
 
+
 class CodeReviewBody(BaseModel):
     repo_links: List[str]
+
 
 class ApplicationScoreBody(BaseModel):
     cover_letter: str
@@ -148,9 +151,11 @@ async def check_toxicity(body: ContentBody, request: Request):
 async def check_toxicity(image: UploadFile, request: Request):
     return miscellaneous_controllers.check_image_profanity(image, request)
 
+
 @app.post("/code_review")
 async def code_review(body: CodeReviewBody):
-    return code_review_controllers.codeReview(body)
+    return code_review_controllers.review_code(body)
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=os.getenv("PORT"))
