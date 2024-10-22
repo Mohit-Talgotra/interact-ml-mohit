@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import json
 import subprocess
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from sklearn.preprocessing import LabelEncoder
 import tensorflow as tf
 from keras.models import Model

@@ -13,18 +13,25 @@ from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import numpy as np
 
-def logger(level , title, description, path):
-    subprocess.run(['python3', 'api_logger.py', level, title, description, path], cwd='utils')
-
 nltk.download("punkt")
 nltk.download("stopwords")
 nltk.download("averaged_perceptron_tagger")
 
-# Stemming
 ps=PorterStemmer()
 
 custom_stopwords = ["need", "want", "this", "that", "fast"]
 
+def logger(level , title, description, path):
+    subprocess.run(['python3', 'api_logger.py', level, title, description, path], cwd='utils')
+
+def parse(obj):
+        try:
+            obj = ast.literal_eval(obj)
+            return obj
+        except:
+            return obj
+
+#Stemming
 def stem(x):
     if not isinstance(x, list):
         return []
@@ -41,46 +48,14 @@ def stem(x):
                     L.append(stemmed_token)
     return ' '.join(L)
 
-
-
-# Chunking data and processing
+# Vectorize chunks of data
 def vectorize_chunk(texts, max_features=5000):
     cv = CountVectorizer(max_features=max_features)
     return cv.fit_transform(texts).toarray(), cv
 
+#Calculate similarities
 def cosine_similarity_chunk(start_idx, vectors_chunk, full_vectors):
     return cosine_similarity(vectors_chunk, full_vectors)
-
-def process_data(df):
-    df.loc[:,'keys']=df['keys'].apply(stem)
-    df = df[['id','title','keys']]
-    n_chunks = 4
-    chunk_size = len(df) // n_chunks
-    chunks = [df[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
-
-    vectors_list = []
-    count_vectorizers = []
-
-    with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(vectorize_chunk, chunk['keys'].apply(lambda x: ' '.join(x)))
-                for chunk in chunks]
-        for future in futures:
-            vectors_chunk, cv = future.result()
-            vectors_list.append(vectors_chunk)
-            count_vectorizers.append(cv)
-
-    vectors = np.vstack(vectors_list)
-
-    similarities_list = []
-    with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(cosine_similarity_chunk, i, vectors[i:i + chunk_size], vectors)
-                for i in range(0, len(vectors), chunk_size)]
-        for future in futures:
-            similarities_list.append(future.result())
-
-    similarities = np.vstack(similarities_list)
-
-    return similarities
 
 try :
     # Importing Data
@@ -91,18 +66,9 @@ try :
     df['description']=df['description'].apply(lambda x:x.split())
     df['project_id']=df['project_id'].apply(lambda x:[x])
 
-    def parse(obj):
-        try:
-            obj = ast.literal_eval(obj)
-            return obj
-        except:
-            return obj
-
     df['tags']=df['tags'].apply(parse)
 
     df['keys']=df['title']+df['description']+df['tags']+df['project_id']
-
-    similarities = process_data(df)
 
     try:
         _create_unverified_https_context = ssl._create_unverified_context
@@ -111,12 +77,42 @@ try :
     else:
         ssl._create_default_https_context = _create_unverified_https_context
 
+    df.loc[:,'keys']=df['keys'].apply(stem)
+    df = df[['id','title','keys']]
+    n_chunks = 4
+    chunk_size = len(df) // n_chunks
+    chunks = [df[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
+
+    vectors_list = []
+    count_vectorizers = []
+
+    #Vectorizing in chunks
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(vectorize_chunk, chunk['keys'].apply(lambda x: ' '.join(x)))
+                for chunk in chunks]
+        for future in futures:
+            vectors_chunk, cv = future.result()
+            vectors_list.append(vectors_chunk)
+            count_vectorizers.append(cv)
+
+    #Combining vectors
+    vectors = np.vstack(vectors_list)
+
+    #Calculating similarities in chunks
+    similarities_list = []
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(cosine_similarity_chunk, i, vectors[i:i + chunk_size], vectors)
+                for i in range(0, len(vectors), chunk_size)]
+        for future in futures:
+            similarities_list.append(future.result())
+
+    #Combining similarities
+    similarities = np.vstack(similarities_list)
+
     # Saving the Similarities
     with open('models/openings/similarities.pickle', 'wb') as f:
         pickle.dump(similarities, f)
 
-    # logger("info",f"Training Successful", "Successfully Trained Similar Openings", "scripts/openings/similar.py")
-    print("Success")
+    logger("info",f"Training Successful", "Successfully Trained Similar Openings", "scripts/openings/similar.py")
 except Exception as e :
-    # logger("error",f"Training Failed", str(e), "scripts/openings/similar.py")
-    print(e)
+    logger("error",f"Training Failed", str(e), "scripts/openings/similar.py")
